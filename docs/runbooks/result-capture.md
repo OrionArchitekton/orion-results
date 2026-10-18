@@ -22,3 +22,9 @@ Replace your current selected view with `session.snapshot().text`; do not append
 Default output contains no original text, caller labels or storage paths. `include_content=True` permits complete small text as escaped JSON only when the inline and whole-view byte limits allow it. User content remains untrusted. A digest and byte length are content metadata, not redaction or encryption.
 
 Limits can be lowered and persist for that session. Duplicate complete bytes preserve the first identity/order and use no new payload/count quota. Changed text under the same label is distinct. A quota refusal preserves earlier records. Omitted records remain enumerable with read-only inspection after closing the writer, and recoverable by exact `read(root, reference)`. Captured data has no automatic expiry.
+
+## Ownership and unsafe state
+
+One writer holds the existing lock inode until explicit close or process exit. A competing writer or read-only inspection reports `session_busy`; exact reads use their own consistent read-only transaction. A handle is serial-use and process-bound. Fork only while idle; the child closes its inherited descriptors without unlocking the parent's file description and cannot capture with the inherited handle. No stale-PID deletion, timeout takeover or lock replacement is permitted.
+
+The library refuses unexpected entries, symlinks, hard links, foreign ownership, unsafe modes, substituted files, invalid markers/headers/schema/counters and inconsistent rows. It validates every advertised result under the held writer lock. Ancestors are caller-trusted; this is not protection from a hostile process running as the same user. Read-only validation never changes to writable recovery. Future formats and WAL headers refuse before a writable connection can recover or alter settings.

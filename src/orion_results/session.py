@@ -51,7 +51,7 @@ class Session:
         db = self._store.db
         commit_attempted = False
         try:
-            _storage.namespace(self._store.dfd)
+            self._store.guard()
             db.execute("BEGIN IMMEDIATE")
             rows = _storage.validate(db, self.session_id, self.limits)
             duplicate = False
@@ -69,6 +69,7 @@ class Session:
                 db.execute("UPDATE session_meta SET committed_count=committed_count+1, committed_bytes=committed_bytes+?, next_ordinal=next_ordinal+1", (len(payload),))
             commit_attempted = True
             db.execute("COMMIT")
+            self._store.guard()
             # A distinct read-only connection verifies application counters and exact bytes.
             verify = _storage.connect(self._store.dfd)
             try:

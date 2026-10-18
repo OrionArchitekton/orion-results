@@ -1,5 +1,6 @@
 """One private local SQLite implementation; no store adapters or automatic repair."""
 from dataclasses import asdict
+import errno
 import fcntl
 import hashlib
 import json
@@ -9,6 +10,7 @@ import sqlite3
 import stat
 import sys
 import uuid
+import weakref
 
 from .models import Limits, Reference, ResultError, session_identity, utf8
 
@@ -29,7 +31,17 @@ SCHEMA = (
     "CHECK(ordinal>=0), payload BLOB NOT NULL)",
 )
 DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
+_stores = weakref.WeakSet()
+
+
+def _after_fork_child():
+    # close(), never LOCK_UN: flock open descriptions are shared with the parent.
+    for store in tuple(_stores):
+        store.close()
+
+
+os.register_at_fork(after_in_child=_after_fork_child)
 
 
 def platform_check():
@@ -111,7 +123,10 @@ def marker(dfd, sid):
             raise ResultError("unsupported_format")
         if data["session_id"] != sid or not isinstance(data["limits"], dict) or set(data["limits"]) != set(asdict(Limits())):
             raise ValueError()
-        return Limits(**data["limits"])
+        try:
+            return Limits(**data["limits"])
+        except ResultError:
+            raise ValueError() from None
     except (ValueError, TypeError, UnicodeError, RecursionError):
         raise ResultError("corrupt") from None
     finally:
@@ -134,6 +149,8 @@ def namespace(dfd):
     entries = set(os.listdir(dfd))
     if entries - allowed:
         raise ResultError("unsafe_storage")
+    if {"session.json", "session.lock", DB_NAME} - entries:
+        raise ResultError("missing")
     for name in entries:
         fd = safe_file(dfd, name, MARKER_MAX if name == "session.json" else DB_MAX)
         os.close(fd)
@@ -178,9 +195,17 @@ def connect(dfd, writable=False, new=False):
 
 def validate(db, sid, limits):
     """Call only within a consistent transaction. Return transient rows, never cache."""
+    schema = set(db.execute("SELECT type,name,tbl_name,sql FROM sqlite_master"))
+    expected_schema = {("table", "session_meta", "session_meta", SCHEMA[0]),
+                       ("table", "results", "results", SCHEMA[1]),
+                       ("index", "sqlite_autoindex_results_1", "results", None),
+                       ("index", "sqlite_autoindex_results_2", "results", None)}
+    if schema != expected_schema or db.execute("PRAGMA quick_check(1)").fetchone() != ("ok",):
+        raise ResultError("corrupt")
     meta = db.execute("SELECT * FROM session_meta").fetchall()
     expected = (1, 1, sid, *asdict(limits).values())
-    if len(meta) != 1 or meta[0][:7] != expected:
+    if (len(meta) != 1 or meta[0][:7] != expected or len(meta[0]) != 10
+            or any(type(value) is not int for i, value in enumerate(meta[0]) if i != 2)):
         raise ResultError("corrupt")
     rows = db.execute("SELECT sha256,utf8_bytes,first_key,ordinal,payload FROM results ORDER BY ordinal").fetchall()
     total = 0
@@ -225,6 +250,7 @@ class Store:
         self.shared = shared
         platform_check()
         path = root_path(root)
+        self.root_path = path
         if not create:
             session_identity(sid)
         try:
@@ -255,8 +281,10 @@ class Store:
                 self.lfd = safe_file(self.dfd, "session.lock")
             try:
                 fcntl.flock(self.lfd, (fcntl.LOCK_SH if shared else fcntl.LOCK_EX) | fcntl.LOCK_NB)
-            except BlockingIOError:
-                raise ResultError("session_busy") from None
+            except OSError as error:
+                if error.errno in (errno.EACCES, errno.EAGAIN):
+                    raise ResultError("session_busy") from None
+                raise
             if create:
                 fd = create_file(self.dfd, DB_NAME)
                 os.close(fd)
@@ -275,15 +303,37 @@ class Store:
             namespace(self.dfd)
             if self.db is None:
                 self.db = connect(self.dfd, writable=not shared)
+            self.identities = {name: self.identity(os.stat(name, dir_fd=self.dfd, follow_symlinks=False))
+                               for name in ("session.json", "session.lock", DB_NAME)}
             self.rows()
+            _stores.add(self)
         except (ResultError, OSError, sqlite3.DatabaseError) as error:
             self.close()
             mapped = map_error(error, outcome="not_stored" if not shared else "unavailable", sid=self.sid)
             mapped._observed_limits = getattr(self, "limits", None)
             raise mapped from None
 
-    def rows(self):
+    @staticmethod
+    def identity(st):
+        return st.st_dev, st.st_ino
+
+    def guard(self):
+        root_now = os.stat(self.root_path, follow_symlinks=False)
+        session_now = os.stat(self.sid, dir_fd=self.rfd, follow_symlinks=False)
+        check_stat(root_now, directory=True)
+        check_stat(session_now, directory=True)
+        if (self.identity(root_now) != self.identity(os.fstat(self.rfd))
+                or self.identity(session_now) != self.identity(os.fstat(self.dfd))):
+            raise ResultError("unsafe_storage")
         namespace(self.dfd)
+        for name, expected in self.identities.items():
+            if self.identity(os.stat(name, dir_fd=self.dfd, follow_symlinks=False)) != expected:
+                raise ResultError("unsafe_storage")
+        if marker(self.dfd, self.sid) != self.limits:
+            raise ResultError("corrupt")
+
+    def rows(self):
+        self.guard()
         self.db.execute("BEGIN")
         try:
             return validate(self.db, self.sid, self.limits)
