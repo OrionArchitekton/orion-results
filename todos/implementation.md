@@ -5,7 +5,7 @@
 - [x] S3 aggregate budget/dedup/quotas
 - [x] S4 processes/filesystem refusal
 - [x] S5 unknown commits/recovery
-- [ ] S6 backup/package lifecycle
+- [x] S6 backup/package lifecycle
 - [ ] S7 artifacts/runbook/private launch copy
 - [ ] Final author review/receipt
 

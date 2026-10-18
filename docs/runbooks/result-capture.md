@@ -44,3 +44,22 @@ Before submitting, retain `expected = Reference.from_text(session.session_id, te
 Read the exact expected reference with `read(root, expected)`. Present readability is evidence of current content, not proof an earlier receipt returned. If the read-only transaction requires journal recovery, inspection reports incomplete/recovery_required and leaves files unchanged. `Session.open(root, session_id)` is the explicit writable recovery action. SQLite may replay/roll back its native journal only after the supported marker/header and private-file checks. Full schema/counter/content validation precedes further captures. Never delete a journal or recapture input to conceal incomplete state.
 
 The native tests kill only owned synthetic writers at named precommit and postcommit barriers, including a cache-spill hot journal, and exercise SQLITE_FULL with a database page ceiling. SQL-stage I/O/rollback and read-back failures are scoped injections around real SQLite operations. Foreign UID and digest-collision observations are simulated. None of these certify actual power loss, disk controllers, network filesystems or every SQLite VFS fail point.
+
+## Backup and restore
+
+1. Open the selected existing session with `Session.open(root, session_id)`. Hold this writer handle throughout the copy. Do not fork/share it or start another capture. A successful `snapshot` verifies the current supported state and completes its read transaction.
+2. Create a fresh private destination root/session (0700) and copy only `session.json`, `session.lock` and `results.sqlite3` into new exclusive 0600 files. Do not hard-link the lock or database. See the installed walkthrough's `copy_quiescent` routine. A live transaction filesystem copy is not a backup. Do not remove a journal to manufacture quiescence.
+3. Flush/fsync copied files and their directory. Read every expected exact reference under the explicit destination root; then reopen/inspect that destination. Retain the source writer until copying and verification finish. A restored selected root is independent storage, not a new authority grant.
+4. After verifying both copies, close handles normally. Keep backup locations and references under the same privacy controls as the original payloads.
+
+No external anti-rollback history exists. An internally consistent old backup can validate; an expected newer reference remains missing, without fallback.
+
+## Install, uninstall, upgrade and rollback
+
+Use an isolated venv and a reviewed wheel. Runtime dependencies are standard-library-only; build/test dependencies are development-only hashed locks. Uninstall the distribution with that venv's `python -m pip uninstall orion-results`. This removes package files and leaves caller-selected capture sessions untouched. Reinstall the exact reviewed wheel and recover the same explicit references. Unsupported formats refuse; no automatic upgrade, legacy-note migration or schema rewrite occurs.
+
+Rollback this private candidate by retaining reviewed data/backups and removing only its selected disposable venvs/build outputs. Do not switch existing helper symlinks, configs or hooks. The standalone walkthrough creates a fresh synthetic parent, verifies only its expected selected namespaces remain and removes only that parent; unexpected state is retained for inspection. General production-data removal is a separate caller decision. There is no collector/deletion API.
+
+## Validation and monitoring
+
+Run the installed walkthrough and installed acceptance suite. Record exact source/wheel/sdist identities, interpreter/SQLite/filesystem and the scopes of native versus injected checks. Close the writer before read-only inspection. There is no daemon or ongoing monitoring service; the caller checks receipts/errors at each selected capture/read. Preserve original text and an expected reference whenever a receipt is absent or unknown. Never count process health or a clean SQLite quick_check as proof that the requested result is recovered.
