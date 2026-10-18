@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Explicit private result capture and byte-bounded snapshots"
 requires-python = ">=3.11"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,6 +1,6 @@
 # orion-results
 
-Private review candidate 0.1.0. Working name; not published. MIT is proposed, with package-specific rights and the license grant still awaiting owner confirmation.
+orion-results 0.1.0 release candidate. MIT licensed. Prepared privately; publication remains a separate release action.
 
 Capture complete text in an explicitly selected private local session, pass a byte-bounded snapshot, and recover the exact text by reference. There are no pip runtime dependencies, services or automatic harness hooks.
 

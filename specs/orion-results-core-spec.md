@@ -1,6 +1,6 @@
 # Bounded result capture: Python core specification
 
-Status: owner-approved private implementation contract, 2026-10-18. The owner approved implementation after reviewing the spec and extraction plan. Package rights/licensing, public destinations, publication and private-runtime adoption remain separate actions. `orion-results` / `orion_results` are working distribution/import names, pending naming review.
+Status: owner-approved private implementation contract, 2026-10-18. The owner approved implementation after reviewing the spec and extraction plan. The owner approved the reviewed package, MIT and proposed names; publication and private-runtime adoption remain separate actions. `orion-results` / `orion_results` are the owner-approved distribution/import names.
 
 ## Outcome and scope
 
@@ -135,7 +135,7 @@ Before claiming the release packet ready, retain exact source/tree identity, bui
 
 Prepare a standalone quickstart and recovery runbook covering configuration, allowed storage effects, limits, known/unknown commits, explicit inspection, backup/read-back, upgrade, uninstall and rollback. The runbook's freshness frontmatter names its verified date, review-after date, topics and references, set from actual evidence. Prepare Works/guide copy alongside the artifact before full-package review. A public guide video is separately selected and creatively reviewed.
 
-Remaining later decisions: package-specific source rights and license grant (MIT is the proposed family default), final names/repository destinations, exact accepted artifacts/copy, qualified protected reviews where required, and the approved outward release set. Build/preparation is not publication authorization. No new public/private hosted repository, tag, registry upload, deployment, permission grant or runtime change is included in this private implementation task.
+The owner approved the package-specific review, MIT and proposed repository destinations. Later decisions: refreshed exact artifacts/site/guide acceptance, qualified protected reviews where required, and the explicit outward release set. Build/preparation is not publication authorization. No new public/private hosted repository, tag, registry upload, deployment, permission grant or runtime change is included in this private implementation task.
 
 ## Feasibility references
 

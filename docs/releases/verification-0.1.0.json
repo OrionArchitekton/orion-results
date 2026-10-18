@@ -1,6 +1,6 @@
 {
   "candidate": "0.1.0",
-  "status": "private technical candidate; rights, destinations, full-package acceptance pending",
+  "status": "MIT release candidate prepared privately; refreshed artifacts and public release acceptance pending",
   "platform": {
     "python": "3.11.9",
     "sqlite": "3.45.1",
@@ -37,10 +37,9 @@
     "public publication"
   ],
   "release_decisions_pending": [
-    "package-specific rights",
-    "MIT grant and attribution",
-    "final names and destinations",
-    "full-package artifact/copy acceptance"
+    "refreshed core/site/guide artifact acceptance",
+    "explicit outward release set",
+    "hosted CI/protected human review after release authorization"
   ],
   "development_tools": {
     "osv_query_date": "2026-10-18",
@@ -52,5 +51,6 @@
     "checks": 87,
     "source_suite": "passed before clean-artifact freeze",
     "exact_artifact_receipt": "retained in private review packet; no public release or independent acceptance claimed"
-  }
+  },
+  "owner_review": "Package/MIT/proposed names and copy approved 2026-10-18; no publication or runtime-adoption authorization"
 }

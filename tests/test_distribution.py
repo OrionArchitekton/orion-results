@@ -100,4 +100,5 @@ def test_wheel_sdist_have_only_the_reviewed_export():
         if name.endswith(('.py','.md','.json','.toml','.yml','.in','.txt')):
             assert (b'/home/' + b'orion/') not in data,name
             assert (b'100.' + b'80.') not in data,name
-    assert b'PRIVATE REVIEW DRAFT' in next(value for name,value in entries.items() if name.endswith('/LICENSE'))
+    assert b'Copyright (c) 2026 Dan Mercede' in next(value for name,value in entries.items() if name.endswith('/LICENSE'))
+    assert 'License-Expression: MIT' in metadata
