@@ -2,7 +2,7 @@
   "candidate": "0.1.0",
   "status": "private technical candidate; rights, destinations, full-package acceptance pending",
   "platform": {
-    "python": "3.11.14",
+    "python": "3.11.9",
     "sqlite": "3.45.1",
     "system": "Linux x86_64 / WSL2",
     "filesystem": "ext4"
