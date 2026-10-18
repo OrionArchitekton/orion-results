@@ -1,0 +1,31 @@
+name: private-candidate-core
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  core-and-artifacts:
+    name: core-and-artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install locked development tools
+        run: |
+          mkdir -m 700 .private
+          python -m venv .venv-build
+          python -m venv .venv-test
+          .venv-build/bin/python -m pip install --require-hashes -r build-requirements.lock
+          .venv-test/bin/python -m pip install --require-hashes -r dev-requirements.lock
+      - name: Verify installed package and archives
+        run: |
+          git diff --check
+          python tools/check.py --phase ci-full
+          .venv-test/bin/python -I examples/capture_results.py

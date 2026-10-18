@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==80.9.0", "wheel==0.45.1"]
+requires = ["setuptools==83.0.0", "wheel==0.46.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,14 @@ name = "orion-results"
 version = "0.1.0"
 description = "Explicit private result capture and byte-bounded snapshots"
 requires-python = ">=3.11"
+readme = "README.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.data-files]
+"share/orion-results" = ["README.md", "LICENSE", "NOTICE"]
+"share/orion-results/specs" = ["specs/orion-results-core-spec.md"]
+"share/orion-results/docs/runbooks" = ["docs/runbooks/result-capture.md"]
+"share/orion-results/examples" = ["examples/capture_results.py"]
+"share/orion-results/docs/releases" = ["docs/releases/verification-0.1.0.json"]

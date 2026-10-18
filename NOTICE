@@ -1,0 +1,14 @@
+Private review candidate: orion-results 0.1.0 (working name).
+
+The Python core, synthetic acceptance tests and standalone documentation were
+newly authored for this candidate with AI assistance. Concepts were assessed
+from a private bounded-context helper; private source/history/configuration was
+not imported. No copied third-party implementation or binary is intentionally
+vendored. CPython and its embedded SQLite are prerequisites supplied separately
+by the consumer; they are not redistributed in this wheel.
+
+Package-specific ownership, final attribution and the proposed MIT grant await
+owner review. Prior approvals for other packages do not clear this decision.
+Development-only tools have separate upstream licenses and are not runtime
+requirements or bundled wheel code. Draft workflow templates also need final
+source-rights/notices review before public admission.

@@ -33,7 +33,7 @@ Capture receipts and inspection metadata are not automatically bounded prompt te
 
 One public module hides the storage and rendering implementation. One selected embedded local store is sufficient. A directory of independent record files was considered and rejected: without a committed index it cannot detect a missing record/healthy subset, while adding that index creates a multi-file recovery protocol. SQLite transactions keep content and membership/counters together. This is a new candidate-owned schema, not a mutation or migration of any estate store. Test callers and product callers cross the same installed Python seam.
 
-## Public interface proposal
+## Public interface
 
 ```python
 Session.create(root, *, limits=Limits()) -> Session
@@ -129,13 +129,13 @@ No task/actor string, result reference, captured instruction, snapshot, model ju
 
 ## Evidence, support and release review
 
-The eventual living code contract is `specs/orion-results-core-spec.md`; copy this domain contract into the candidate before implementation and update it with reviewed behavior changes. This private design packet is not a claim that the API or persistence already exists.
+The living code contract is `specs/orion-results-core-spec.md`. It was copied before implementation and accompanies this private candidate. Contract text is not test evidence; consult the exact-artifact verification packet for observed behavior.
 
 Before claiming the release packet ready, retain exact source/tree identity, built wheel/sdist digests and member lists, installed S1-S7 outcomes, transaction fail-point observations, independent-session/one-writer proof, local platform/filesystem/linked-SQLite identity, dependency/secret scans, source lineage, license/notices, and original-helper preservation hashes. Sanitize public receipts separately. An injected interruption proves only the named stage; it is not a real power-loss test. Source tests for the old helper do not satisfy these scenarios.
 
 Prepare a standalone quickstart and recovery runbook covering configuration, allowed storage effects, limits, known/unknown commits, explicit inspection, backup/read-back, upgrade, uninstall and rollback. The runbook's freshness frontmatter names its verified date, review-after date, topics and references, set from actual evidence. Prepare Works/guide copy alongside the artifact before full-package review. A public guide video is separately selected and creatively reviewed.
 
-Remaining later decisions: package-specific source rights and license grant (MIT is the proposed family default), final names/repository destinations, exact accepted artifacts/copy, qualified protected reviews where required, and the approved outward release set. Build/preparation is not publication authorization. No new public/private hosted repository, tag, registry upload, deployment, permission grant or runtime change occurs in this spec task.
+Remaining later decisions: package-specific source rights and license grant (MIT is the proposed family default), final names/repository destinations, exact accepted artifacts/copy, qualified protected reviews where required, and the approved outward release set. Build/preparation is not publication authorization. No new public/private hosted repository, tag, registry upload, deployment, permission grant or runtime change is included in this private implementation task.
 
 ## Feasibility references
 

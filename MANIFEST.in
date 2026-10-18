@@ -1,0 +1,13 @@
+include README.md LICENSE NOTICE pyproject.toml MANIFEST.in
+include build-requirements.lock dev-requirements.lock .gitignore
+recursive-include src *.py
+recursive-include tests *.py
+recursive-include specs *.md
+recursive-include docs *.md *.json
+recursive-include examples *.py
+recursive-include tools *.py
+recursive-include .github *.yml
+prune .private
+prune .venv-build
+prune .venv-test
+global-exclude *.py[cod]

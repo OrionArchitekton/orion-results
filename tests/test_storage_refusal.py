@@ -49,11 +49,11 @@ def test_unexpected_schema_and_invalid_rows_are_refused(tmp_path,change):
     assert hashlib.sha256((directory/'results.sqlite3').read_bytes()).hexdigest()==before
 
 
-@pytest.mark.parametrize('kind',['symlink','hardlink','mode','oversize','duplicate','nan','unknown','version','malformed'])
-@pytest.mark.parametrize('name',['session.json','results.sqlite3','session.lock','results.sqlite3-journal'])
+@pytest.mark.parametrize('name,kind',[(name,kind)
+    for name in ('session.json','results.sqlite3','session.lock','results.sqlite3-journal')
+    for kind in ('symlink','hardlink','mode','oversize','duplicate','nan','unknown','version','malformed')
+    if name=='session.json' or kind in ('symlink','hardlink','mode','oversize')])
 def test_unsafe_namespace_preserves_unrelated_sentinel(tmp_path,kind,name):
-    if name!='session.json' and kind in ('duplicate','nan','unknown','version','malformed'):
-        pytest.skip('marker-only encoding case')
     root,directory,ref=new_selected(tmp_path)
     p=directory/name
     sentinel=tmp_path/'sentinel'

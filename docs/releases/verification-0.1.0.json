@@ -1,0 +1,51 @@
+{
+  "candidate": "0.1.0",
+  "status": "private technical candidate; rights, destinations, full-package acceptance pending",
+  "platform": {
+    "python": "3.11.14",
+    "sqlite": "3.45.1",
+    "system": "Linux x86_64 / WSL2",
+    "filesystem": "ext4"
+  },
+  "native_checks": [
+    "installed exact recovery",
+    "private permissions",
+    "writer contention and process exit",
+    "fork descriptor closure",
+    "byte-bounded snapshots",
+    "quota refusal",
+    "precommit and postcommit owned-process kill",
+    "SQLite hot-journal recovery",
+    "SQLITE_FULL page ceiling",
+    "missing-row detection",
+    "quiescent backup/restore",
+    "uninstall/reinstall preservation"
+  ],
+  "simulated_checks": [
+    "foreign-UID fstat observation",
+    "digest collision identity",
+    "transaction-stage/rollback/readback I/O faults",
+    "KeyboardInterrupt after commit"
+  ],
+  "not_proven": [
+    "hardware power loss",
+    "all VFS fail points",
+    "other operating systems",
+    "non-WSL Linux",
+    "native harness adapters",
+    "independent reviewer acceptance",
+    "public publication"
+  ],
+  "release_decisions_pending": [
+    "package-specific rights",
+    "MIT grant and attribution",
+    "final names and destinations",
+    "full-package artifact/copy acceptance"
+  ],
+  "development_tools": {
+    "osv_query_date": "2026-10-18",
+    "results": "zero known advisories returned for 10 final pinned build/test/bootstrap distributions",
+    "earlier_findings": "retained privately; four development tools updated before final artifacts",
+    "scope": "PyPI dependency advisory query, not a host/SQLite security certification"
+  }
+}
