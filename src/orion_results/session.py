@@ -99,6 +99,14 @@ class Session:
             self._store.close()
             self._closed = True
 
+    def snapshot(self, *, budget_bytes=32_000, include_content=False):
+        from ._snapshot import render
+        self._check()
+        try:
+            return render(self.session_id, self.limits, self._store.rows(), budget_bytes, include_content)
+        except (ResultError, OSError, sqlite3.DatabaseError) as error:
+            raise _storage.map_error(error, sid=self.session_id) from None
+
     def __enter__(self):
         self._check()
         return self
@@ -108,7 +116,12 @@ class Session:
 
 
 def read(root, reference):
-    return _storage.read_rows(root, Reference.parse(reference))
+    try:
+        selected = Reference.parse(reference)
+        return _storage.read_rows(root, selected)
+    except ResultError as error:
+        raise ResultError(error.code, "unavailable", session_id=error.session_id,
+                          reference=error.reference) from None
 
 
 def inspect_session(root, session_id):

@@ -1,7 +1,7 @@
 # Approved private implementation
 
 - [x] S1 capture/reopen/privacy/inputs
-- [ ] S2 exact recovery/safe display
+- [x] S2 exact recovery/safe display
 - [ ] S3 aggregate budget/dedup/quotas
 - [ ] S4 processes/filesystem refusal
 - [ ] S5 unknown commits/recovery
