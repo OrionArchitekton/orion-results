@@ -68,6 +68,7 @@ class Session:
                 db.execute("INSERT INTO results VALUES (?,?,?,?,?)", (ref.sha256, len(payload), key, len(rows), payload))
                 db.execute("UPDATE session_meta SET committed_count=committed_count+1, committed_bytes=committed_bytes+?, next_ordinal=next_ordinal+1", (len(payload),))
             commit_attempted = True
+            self._faulted = True
             db.execute("COMMIT")
             self._store.guard()
             # A distinct read-only connection verifies application counters and exact bytes.
@@ -79,13 +80,14 @@ class Session:
                     raise ResultError("corrupt")
             finally:
                 verify.close()
+            self._faulted = False
             return CaptureReceipt(ref, ref.utf8_bytes, ref.sha256, duplicate)
         except (ResultError, OSError, sqlite3.DatabaseError) as error:
             unknown = commit_attempted
             try:
                 if db.in_transaction:
                     db.execute("ROLLBACK")
-            except sqlite3.DatabaseError:
+            except (OSError, sqlite3.DatabaseError):
                 unknown = True
             if unknown:
                 self._faulted = True

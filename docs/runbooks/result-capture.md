@@ -28,3 +28,19 @@ Limits can be lowered and persist for that session. Duplicate complete bytes pre
 One writer holds the existing lock inode until explicit close or process exit. A competing writer or read-only inspection reports `session_busy`; exact reads use their own consistent read-only transaction. A handle is serial-use and process-bound. Fork only while idle; the child closes its inherited descriptors without unlocking the parent's file description and cannot capture with the inherited handle. No stale-PID deletion, timeout takeover or lock replacement is permitted.
 
 The library refuses unexpected entries, symlinks, hard links, foreign ownership, unsafe modes, substituted files, invalid markers/headers/schema/counters and inconsistent rows. It validates every advertised result under the held writer lock. Ancestors are caller-trusted; this is not protection from a hostile process running as the same user. Read-only validation never changes to writable recovery. Future formats and WAL headers refuse before a writable connection can recover or alter settings.
+
+## Interrupted capture and exact recovery
+
+Before submitting, retain `expected = Reference.from_text(session.session_id, text)` and your original text. Calculation alone proves no storage. Inspect only that selected session after closing its writer.
+
+| Observed failure stage | Outcome |
+|---|---|
+| Invocation/guard refusal, or precommit failure with confirmed rollback | `not_stored` for this attempt |
+| COMMIT attempted, failed rollback, failed postcommit read-back | `commit_unknown`; handle faulted |
+| No return after process interruption | No receipt; retain uncertainty and recover by exact reference |
+
+`not_stored` does not assert that an older matching result is absent. A faulted handle accepts no more capture/snapshot operations. Close it, then call `inspect_session(root, session_id)`. `complete` means every record and committed counter validates as of that read. `incomplete` or `corrupt` never means healthy emptiness. Busy writers and OS access errors remain explicit errors. Do not resend automatically.
+
+Read the exact expected reference with `read(root, expected)`. Present readability is evidence of current content, not proof an earlier receipt returned. If the read-only transaction requires journal recovery, inspection reports incomplete/recovery_required and leaves files unchanged. `Session.open(root, session_id)` is the explicit writable recovery action. SQLite may replay/roll back its native journal only after the supported marker/header and private-file checks. Full schema/counter/content validation precedes further captures. Never delete a journal or recapture input to conceal incomplete state.
+
+The native tests kill only owned synthetic writers at named precommit and postcommit barriers, including a cache-spill hot journal, and exercise SQLITE_FULL with a database page ceiling. SQL-stage I/O/rollback and read-back failures are scoped injections around real SQLite operations. Foreign UID and digest-collision observations are simulated. None of these certify actual power loss, disk controllers, network filesystems or every SQLite VFS fail point.

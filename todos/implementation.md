@@ -4,7 +4,7 @@
 - [x] S2 exact recovery/safe display
 - [x] S3 aggregate budget/dedup/quotas
 - [x] S4 processes/filesystem refusal
-- [ ] S5 unknown commits/recovery
+- [x] S5 unknown commits/recovery
 - [ ] S6 backup/package lifecycle
 - [ ] S7 artifacts/runbook/private launch copy
 - [ ] Final author review/receipt
