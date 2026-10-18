@@ -1,7 +1,10 @@
 """One private local SQLite implementation; no store adapters or automatic repair."""
 from dataclasses import asdict
 import errno
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 import hashlib
 import json
 import os
@@ -30,8 +33,8 @@ SCHEMA = (
     "CHECK(utf8_bytes>=0), first_key TEXT NOT NULL, ordinal INTEGER NOT NULL UNIQUE "
     "CHECK(ordinal>=0), payload BLOB NOT NULL)",
 )
-DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
-FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
+DIR_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+FILE_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
 _stores = weakref.WeakSet()
 
 
@@ -41,11 +44,15 @@ def _after_fork_child():
         store.close()
 
 
-os.register_at_fork(after_in_child=_after_fork_child)
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_after_fork_child)
 
 
 def platform_check():
     if sys.platform != "linux" or sys.implementation.name != "cpython" or sys.version_info < (3, 11):
+        raise ResultError("unsupported_platform", "not_stored")
+    if fcntl is None or any(not hasattr(os, name) for name in
+                            ("O_DIRECTORY", "O_NOFOLLOW", "O_CLOEXEC", "O_NONBLOCK", "register_at_fork", "pread", "geteuid")):
         raise ResultError("unsupported_platform", "not_stored")
     if sqlite3.sqlite_version_info < (3, 35, 0) or not Path("/proc/self/fd").is_dir():
         raise ResultError("unsupported_platform", "not_stored")
@@ -232,11 +239,18 @@ def map_error(error, *, outcome="unavailable", sid=None):
     if isinstance(error, FileNotFoundError):
         return ResultError("missing", outcome, session_id=sid)
     if isinstance(error, OSError):
-        import errno
         code = "unsafe_storage" if error.errno in (errno.ELOOP, errno.ENOTDIR) else "storage_unavailable"
         return ResultError(code, outcome, session_id=sid)
     if isinstance(error, sqlite3.DatabaseError):
-        code = "recovery_required" if "readonly" in str(error).lower() else "corrupt"
+        base_code = getattr(error, "sqlite_errorcode", 0) & 0xFF
+        if base_code == sqlite3.SQLITE_READONLY:
+            code = "recovery_required"
+        elif base_code in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED, sqlite3.SQLITE_IOERR,
+                           sqlite3.SQLITE_CANTOPEN, sqlite3.SQLITE_FULL, sqlite3.SQLITE_PERM,
+                           sqlite3.SQLITE_INTERRUPT):
+            code = "storage_unavailable"
+        else:
+            code = "corrupt"
         return ResultError(code, outcome, session_id=sid)
     return ResultError("storage_unavailable", outcome, session_id=sid)
 

@@ -47,5 +47,10 @@
     "results": "zero known advisories returned for 10 final pinned build/test/bootstrap distributions",
     "earlier_findings": "retained privately; four development tools updated before final artifacts",
     "scope": "PyPI dependency advisory query, not a host/SQLite security certification"
+  },
+  "installed_acceptance": {
+    "checks": 87,
+    "source_suite": "passed before clean-artifact freeze",
+    "exact_artifact_receipt": "retained in private review packet; no public release or independent acceptance claimed"
   }
 }

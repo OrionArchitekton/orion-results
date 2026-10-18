@@ -188,3 +188,23 @@ def test_untrusted_directory_or_unknown_entry_is_refused(tmp_path,location):
     with pytest.raises(api.ResultError): api.Session.open(root,ref.session_id)
     assert (sentinel/'unchanged').read_text()=='sentinel'
     assert sorted(p.name for p in sentinel.iterdir())==['unchanged']
+
+
+def test_missing_platform_capabilities_refuse_before_state_simulated(tmp_path):
+    script='''
+import builtins,os,pathlib,sys
+native=builtins.__import__
+def selected_import(name,*args,**kwargs):
+    if name=='fcntl': raise ImportError('simulated unsupported capability')
+    return native(name,*args,**kwargs)
+builtins.__import__=selected_import
+for name in ('O_DIRECTORY','O_NOFOLLOW','O_CLOEXEC','register_at_fork'):
+    if hasattr(os,name): delattr(os,name)
+from orion_results import Session,ResultError,Reference
+assert str(Reference.from_text('a'*32,'pure identity')).startswith('r1:')
+try: Session.create(pathlib.Path(sys.argv[1])/'records')
+except ResultError as e: assert e.code=='unsupported_platform'
+else: raise AssertionError('unsupported storage accepted')
+assert list(pathlib.Path(sys.argv[1]).iterdir())==[]
+'''
+    subprocess.run([sys.executable,'-I','-c',script,str(tmp_path)],timeout=10,check=True,capture_output=True)

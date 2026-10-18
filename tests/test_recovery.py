@@ -250,3 +250,18 @@ def test_cold_journal_is_judged_by_readonly_sqlite(tmp_path):
     assert api.inspect_session(root,ref.session_id).status=='complete'
     assert api.read(root,ref)=='retained'
     assert journal.exists() and journal.read_bytes()==before
+
+
+def test_native_sqlite_busy_is_unavailable_not_corruption(tmp_path):
+    root=tmp_path/'records'
+    with api.Session.create(root) as s:
+        ref=s.capture('key','retained').reference
+    native=sqlite3.connect(root/ref.session_id/'results.sqlite3')
+    native.execute('BEGIN EXCLUSIVE')
+    try:
+        with pytest.raises(api.ResultError) as blocked: api.read(root,ref)
+        assert blocked.value.code=='storage_unavailable'
+        assert blocked.value.outcome=='unavailable'
+    finally:
+        native.rollback();native.close()
+    assert api.read(root,ref)=='retained'

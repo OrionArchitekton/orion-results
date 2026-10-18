@@ -1,5 +1,4 @@
 """Explicit capture session lifecycle and exact-reference recovery."""
-from dataclasses import asdict
 import os
 import sqlite3
 
