@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  statuses: read
   checks: read
 
 env:
@@ -48,8 +47,7 @@ jobs:
             }
 
             const pullRequest = context.payload.pull_request;
-            const primarySha = context.sha || null;
-            const fallbackSha = null;
+            const primarySha = pullRequest?.head?.sha || context.sha || null;
             const passingCheckRunConclusions = new Set(["success"]);
 
             function sleep(ms) {
@@ -88,7 +86,7 @@ jobs:
               return matches[matches.length - 1];
             }
 
-            function checkState(name, checkRuns, statuses) {
+            function checkState(name, checkRuns) {
               const checkRun = latestMatchingItem(checkRuns, "name", name);
               if (checkRun) {
                 const status = checkRun.status || "missing";
@@ -102,33 +100,7 @@ jobs:
                 return formatState(conclusion);
               }
 
-              const statusItem = latestMatchingItem(statuses, "context", name);
-              if (statusItem) {
-                const state = (statusItem.state || "missing").toLowerCase();
-                if (state === "success") {
-                  return "SUCCESS";
-                }
-                if (state === "pending") {
-                  return "PENDING";
-                }
-                return formatState(state);
-              }
-
               return "MISSING";
-            }
-
-            function checkStateWithFallback(
-              name,
-              primaryCheckRuns,
-              primaryStatuses,
-              fallbackCheckRuns,
-              fallbackStatuses,
-            ) {
-              const primaryState = checkState(name, primaryCheckRuns, primaryStatuses);
-              if (primaryState !== "MISSING" || !fallbackSha) {
-                return primaryState;
-              }
-              return checkState(name, fallbackCheckRuns, fallbackStatuses);
             }
 
             function isRetryable(error) {
@@ -160,29 +132,7 @@ jobs:
                   },
                 );
                 const pageItems = response.data.check_runs || [];
-                items.push(...pageItems);
-                if (pageItems.length < 100) {
-                  break;
-                }
-              }
-              return items;
-            }
-
-            async function listStatusesForRef(ref) {
-              const items = [];
-              for (let page = 1; ; page += 1) {
-                const response = await github.request(
-                  "GET /repos/{owner}/{repo}/commits/{ref}/statuses",
-                  {
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    ref,
-                    per_page: 100,
-                    page,
-                  },
-                );
-                const pageItems = response.data || [];
-                items.push(...pageItems);
+                items.push(...pageItems.filter(item => item.app?.id === 15368 && item.head_sha === ref));
                 if (pageItems.length < 100) {
                   break;
                 }
@@ -200,24 +150,10 @@ jobs:
                 }
 
                 const primaryCheckRuns = await listCheckRunsForRef(primarySha);
-                const primaryStatuses = await listStatusesForRef(primarySha);
-                const fallbackCheckRuns = fallbackSha
-                  ? await listCheckRunsForRef(fallbackSha)
-                  : [];
-                const fallbackStatuses = fallbackSha
-                  ? await listStatusesForRef(fallbackSha)
-                  : [];
-
                 let pending = false;
                 let hasFailure = false;
                 for (const name of requiredChecks) {
-                  const state = checkStateWithFallback(
-                    name,
-                    primaryCheckRuns,
-                    primaryStatuses,
-                    fallbackCheckRuns,
-                    fallbackStatuses,
-                  );
+                  const state = checkState(name, primaryCheckRuns);
                   if (state === "SUCCESS") {
                     lastNonSuccessByCheck.delete(name);
                     core.info(`check '${name}' OK (${state})`);

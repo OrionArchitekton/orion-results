@@ -23,6 +23,10 @@ commands = [
      *(a.nodes or [str(root / "tests")]), "-q"],
 ]
 record = {"phase": a.phase, "time_ns": time.time_ns(), "steps": []}
+if a.phase == "ci-full":
+    commands.append([str(test_python), "-I", str(root / "tools/check_sdist.py"),
+                     "--archive", str(out / "orion_results-0.1.0.tar.gz"),
+                     "--directory", str(out / "sdist-consumer")])
 code = 0
 for n, cmd in enumerate(commands):
     with (out / f"{n}.log").open("w") as log:

@@ -5,7 +5,7 @@ recursive-include tests *.py
 recursive-include specs *.md
 recursive-include docs *.md *.json
 recursive-include examples *.py
-recursive-include tools *.py
+recursive-include tools *.py *.mjs
 recursive-include .github *.yml
 prune .private
 prune .venv-build
