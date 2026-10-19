@@ -1,0 +1,61 @@
+{
+  "candidate": "0.1.0",
+  "status": "Reviewed MIT release candidate; exact replacement artifacts and final protected reviews pending",
+  "platform": {
+    "python": "3.11.9",
+    "sqlite": "3.45.1",
+    "system": "Linux x86_64 / WSL2",
+    "filesystem": "ext4"
+  },
+  "native_checks": [
+    "installed exact recovery",
+    "private permissions",
+    "writer contention and process exit",
+    "fork descriptor closure",
+    "byte-bounded snapshots",
+    "quota refusal",
+    "precommit and postcommit owned-process kill",
+    "SQLite hot-journal recovery",
+    "SQLITE_FULL page ceiling",
+    "missing-row detection",
+    "quiescent backup/restore",
+    "uninstall/reinstall preservation",
+    "native writer lock preserved during refused overlapping reader",
+    "optional journal disappearance during native commit",
+    "fork during another thread's operation"
+  ],
+  "simulated_checks": [
+    "foreign-UID fstat observation",
+    "digest collision identity",
+    "transaction-stage/rollback/readback I/O faults",
+    "KeyboardInterrupt after commit",
+    "directory-sync and read-BEGIN interruption",
+    "SQLite read auto-rollback and secondary rollback failure"
+  ],
+  "not_proven": [
+    "hardware power loss",
+    "all VFS fail points",
+    "other operating systems",
+    "non-WSL Linux",
+    "native harness adapters",
+    "independent reviewer acceptance",
+    "public publication"
+  ],
+  "release_decisions_pending": [
+    "replacement core/site/guide artifact acceptance after review fixes",
+    "qualified final-head human reviews and required CI",
+    "exact public download and deployment/guide consumer verification"
+  ],
+  "development_tools": {
+    "osv_query_date": "2026-10-18",
+    "results": "zero known advisories returned for 10 final pinned build/test/bootstrap distributions",
+    "earlier_findings": "retained privately; four development tools updated before final artifacts",
+    "scope": "PyPI dependency advisory query, not a host/SQLite security certification"
+  },
+  "installed_acceptance": {
+    "checks": 104,
+    "source_suite": "passed before clean-artifact freeze",
+    "exact_artifact_receipt": "retained in private review packet; no public release or independent acceptance claimed"
+  },
+  "owner_review": "MIT, names and outward release action set approved 2026-10-18; review fixes require refreshed exact artifact acceptance"
+}
