@@ -1,6 +1,7 @@
 """One private local SQLite implementation; no store adapters or automatic repair."""
 from dataclasses import asdict
 import errno
+from functools import wraps
 try:
     import fcntl
 except ImportError:
@@ -12,6 +13,7 @@ from pathlib import Path
 import sqlite3
 import stat
 import sys
+import threading
 import uuid
 import weakref
 
@@ -36,9 +38,28 @@ SCHEMA = (
 DIR_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
 FILE_FLAGS = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
 _stores = weakref.WeakSet()
+_operation_lock = threading.Lock()
+
+
+def operation(outcome="unavailable"):
+    """Refuse overlap, including reentry, before any raw database descriptor I/O."""
+    def decorate(function):
+        @wraps(function)
+        def selected(*args, **kwargs):
+            selected_lock = _operation_lock
+            if not selected_lock.acquire(blocking=False):
+                raise ResultError("storage_busy", outcome)
+            try:
+                return function(*args, **kwargs)
+            finally:
+                selected_lock.release()
+        return selected
+    return decorate
 
 
 def _after_fork_child():
+    global _operation_lock
+    _operation_lock = threading.Lock()
     # close(), never LOCK_UN: flock open descriptions are shared with the parent.
     for store in tuple(_stores):
         store.close()
@@ -67,7 +88,9 @@ def root_path(root):
         raise ResultError("invalid_input", "not_stored")
     if ".." in Path(value).parts:
         raise ResultError("invalid_input", "not_stored")
-    return value
+    # A final slash or '/.' must not turn a symlink into an intermediate name
+    # before O_NOFOLLOW is applied. Normalize spelling without resolving links.
+    return os.path.normpath(value)
 
 
 def check_stat(st, directory=False, maximum=None):
@@ -159,11 +182,24 @@ def namespace(dfd):
     if {"session.json", "session.lock", DB_NAME} - entries:
         raise ResultError("missing")
     for name in entries:
-        fd = safe_file(dfd, name, MARKER_MAX if name == "session.json" else DB_MAX)
-        os.close(fd)
+        try:
+            observed = os.stat(name, dir_fd=dfd, follow_symlinks=False)
+        except FileNotFoundError:
+            if name == DB_NAME + "-journal":
+                continue  # A concurrent native COMMIT can remove this entry.
+            raise
+        check_stat(observed, maximum=MARKER_MAX if name == "session.json" else DB_MAX)
 
 
 def connect(dfd, writable=False, new=False):
+    # A failed rollback can outlive its public call. Do not close a raw file
+    # descriptor while that same database still has an active transaction.
+    selected = os.stat(DB_NAME, dir_fd=dfd, follow_symlinks=False)
+    check_stat(selected, maximum=DB_MAX)
+    identity = (selected.st_dev, selected.st_ino)
+    if any(store.db is not None and store.db.in_transaction
+           and store.identities.get(DB_NAME) == identity for store in tuple(_stores)):
+        raise ResultError("storage_busy")
     fd = safe_file(dfd, DB_NAME, DB_MAX)
     db = None
     try:
@@ -326,6 +362,9 @@ class Store:
             mapped = map_error(error, outcome="not_stored" if not shared else "unavailable", sid=self.sid)
             mapped._observed_limits = getattr(self, "limits", None)
             raise mapped from None
+        except BaseException:
+            self.close()
+            raise
 
     @staticmethod
     def identity(st):
@@ -347,12 +386,22 @@ class Store:
             raise ResultError("corrupt")
 
     def rows(self):
+        if self.db.in_transaction:
+            raise ResultError("storage_busy")
         self.guard()
-        self.db.execute("BEGIN")
         try:
-            return validate(self.db, self.sid, self.limits)
-        finally:
+            self.db.execute("BEGIN")
+            rows = validate(self.db, self.sid, self.limits)
+        except BaseException:
+            try:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+            except (OSError, sqlite3.DatabaseError):
+                pass  # Preserve the validation error; cleanup cannot replace it.
+            raise
+        if self.db.in_transaction:
             self.db.execute("ROLLBACK")
+        return rows
 
     def close(self):
         if self.db is not None:

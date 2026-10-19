@@ -96,7 +96,7 @@ One public `ResultError` carries a stable `code`, `outcome`, optional selected `
 | Code family | Meaning / mutation classification |
 |---|---|
 | `invalid_input`, `limit_exceeded`, `unsupported_platform` | Invocation refused before publishing a record; capture outcome `not_stored`. |
-| `unsafe_storage`, `unsupported_format`, `session_busy`, `closed_session`, `wrong_process` | Selected operation refused. Capture outcome `not_stored`; no implicit repair or alternate session. |
+| `unsafe_storage`, `unsupported_format`, `session_busy`, `storage_busy`, `closed_session`, `wrong_process` | Selected operation refused. Capture outcome `not_stored`; no implicit repair or alternate session. |
 | `storage_unavailable`, `write_failed` | A failure before commit is `not_stored` only when rollback/non-submission is confirmed. A rollback failure is unknown. Preserve original caller text and selected-session evidence. |
 | `commit_unknown` | Commit was attempted, rollback could not be confirmed, or post-commit verification failed. No success receipt; the writer handle becomes faulted and accepts no further capture/snapshot. |
 | `missing`, `corrupt`, `content_conflict`, `recovery_required` | Exact referenced/selected state cannot satisfy the requested operation. Read/inspection outcome is `unavailable`; capture refusal is `not_stored` unless commit/rollback may be indeterminate, in which case report `commit_unknown`. |
@@ -116,12 +116,30 @@ The primary seam is the public API of a **non-editable wheel installed in an iso
 | S1 | A caller creates a private session, captures a small result and recovers it through a separate installed reader. | Strict inputs; private root/session/record modes under umask 022 and 077; exact reference/digest/length; no install-time state; exact text survives close/reopen; no source-tree imports. |
 | S2 | A large result is captured, its safe default snapshot is passed to a consumer, and the exact content is recovered on request. | No payload/key/path preview in default text; opt-in inline content obeys size/encoding rules; full read-back including Unicode/control characters/empty text; altered, missing, wrong-session or future-version references remain explicit; earlier records are never substituted. |
 | S3 | Repeated and many distinct results produce a bounded current view, with recoverable omitted content. | Dedup retains first identity/order without an extra record; changed content under the same key is distinct; every complete `Snapshot.text` fits budgets including 256 bytes; valid UTF-8, escaped inline text and correct omission counts; all committed unique references remain enumerable/readable; previously returned strings/process memory are explicitly outside the promise. Payload/count quota failures preserve earlier results; SQLite storage exhaustion is an explicit storage failure. |
-| S4 | Two independent sessions and two processes contending for one session behave predictably. | Independent captures cannot overwrite each other. A competing writer is busy; actual process exit releases ownership; the next writer sees existing valid records; no force takeover or lock inode replacement. Symlink/hardlink/owner/mode/type/path-substitution and malformed bounded metadata cases refuse without touching an unrelated sentinel. Forked handles cannot write or unlock a parent's handle. |
+| S4 | Two independent sessions and two processes contending for one session behave predictably. | Independent captures cannot overwrite each other. A competing writer is busy; actual process exit releases ownership; the next writer sees existing valid records; no force takeover or lock inode replacement. Symlink/hardlink/owner/mode/type/path-substitution and malformed bounded metadata cases refuse without touching an unrelated sentinel. Forked handles cannot write or unlock a parent's handle. Overlapping in-process operations refuse without releasing the native SQLite writer lock; a child can start a fresh read after a fork during another thread's operation. |
 | S5 | A write is interrupted or fails at transaction/commit stages and is then inspected through the installed API. | Before commit, no success receipt or silently truncated fallback; `not_stored` requires confirmed rollback. Once commit is attempted or rollback is indeterminate, `commit_unknown`/no-return stays unknown; handle faulted. Exact read/inspection distinguishes complete rows/counters, journal recovery, missing/corrupt state and OS unavailability. Explicit writable reopen permits native SQLite recovery and full revalidation, never recapture. Removing a row without updating its committed count cannot produce a healthy subset. |
 | S6 | A user backs up/restores a quiescent selected session while retaining its writer lock, then upgrades/uninstalls the candidate independently of their data. | Restored reference identity/content verifies under the explicit new private root; unsupported formats refuse mutation; package uninstall leaves sessions intact; reinstallation reads the supported version. The synthetic walkthrough removes only its own temporary parent after successful cleanup checks. Original private helper, other sessions and existing packages remain unchanged. |
 | S7 | A clean consumer follows the exact private release packet using built wheel/sdist and the standalone guide. | Hash-verified artifacts install from fresh environments, the walkthrough demonstrates store/reference/snapshot/recovery/refusal, source archives carry the living spec/runbook/notices, and artifact contents contain no estate config/history/caches/real records. Source, built artifact, evidence, guide and Works copy share the same bounded claim. No stable-newcomer, native-harness or future-composition claim is inferred. |
 
 ## Ecosystem compatibility
+
+All public storage operations are synchronous and process-serial in v0.1.
+An overlapping or reentrant call in the same process refuses immediately with
+`storage_busy`, including calls for a different selected session. No wait queue or
+thread-safe handle sharing is promised. Separate processes retain the documented
+SQLite and writer-lease contention behavior. This boundary prevents a raw
+database-header descriptor close from releasing another library operation's
+process-owned SQLite locks. Forked children receive a fresh operation guard and
+cannot use an inherited writer handle. If an earlier rollback remains unconfirmed,
+exact reads of that database stay busy until its selected handle is closed.
+
+Cancellation before commit preserves the native interruption after confirmed
+rollback; an unconfirmed rollback faults the handle before propagating that
+interruption. Interrupted initialization releases owned descriptors and its writer
+lease while retaining explicit residue for later selected inspection. Read-only
+validation preserves its original error even if rollback also fails. A journal
+that disappears during a concurrent native commit is optional; disappearance of a
+required marker, lock or database remains an explicit missing-state failure.
 
 The library owns only selected result records and snapshot behavior. PM continues owning tasks/claims; browser/phone own their native resource lifecycles; Handoff owns selected context revisions. A caller may attach a result reference, digest and observation scope to their existing evidence/context interface after an optional adapter is separately tested. This library imports none of those products and never edits their state directly.
 

@@ -62,4 +62,19 @@ Rollback this private candidate by retaining reviewed data/backups and removing 
 
 ## Validation and monitoring
 
+Development tools in the two hashed requirement locks are curated together.
+Dependabot proposes GitHub Actions updates; it does not maintain these custom
+pip locks. For a tool update, verify the complete resolved graph, hashes, licenses
+and advisory results, then build with `--require-hashes` and rerun the installed
+suite plus source-archive rebuild before accepting new release bytes.
+
+Call the storage API serially within each process. v0.1 refuses overlapping or
+reentrant operations immediately with `storage_busy`, even across different
+sessions. Do not share Session handles between threads. Separate processes can
+still encounter the documented SQLite busy states. This protects SQLite's
+[process-owned POSIX locks](https://www.sqlite.org/howtocorrupt.html#posix_advisory_locks_canceled_by_a_separate_thread_doing_close).
+Close an interrupted or uncertain handle before inspection or another exact read;
+never interpret cancellation or a refused read as a success receipt. Interrupted
+initialization may leave a selected directory to inspect after owned handles close.
+
 Run the installed walkthrough and installed acceptance suite. Record exact source/wheel/sdist identities, interpreter/SQLite/filesystem and the scopes of native versus injected checks. Close the writer before read-only inspection. There is no daemon or ongoing monitoring service; the caller checks receipts/errors at each selected capture/read. Preserve original text and an expected reference whenever a receipt is absent or unknown. Never count process health or a clean SQLite quick_check as proof that the requested result is recovered.

@@ -1,6 +1,6 @@
 # orion-results
 
-orion-results 0.1.0 release candidate. MIT licensed. Prepared privately; publication remains a separate release action.
+orion-results 0.1.0 release candidate. MIT licensed.
 
 Capture complete text in an explicitly selected private local session, pass a byte-bounded snapshot, and recover the exact text by reference. There are no pip runtime dependencies, services or automatic harness hooks.
 
@@ -29,8 +29,14 @@ The measured limit applies to the complete UTF-8 `Snapshot.text` string. Replace
 
 Each session has one nonblocking cooperative writer lock. Duplicate bytes preserve the first identity/order; a reused key with changed text is distinct. Lower immutable limits are allowed. Session roots must be explicit absolute private paths. No environment/default-home discovery, network storage, multiwriter or cross-host fencing is included. References carry identity, not authorization, redaction or encryption.
 
+Call the storage API serially within each process. Overlapping or reentrant calls
+refuse immediately with `storage_busy`, including calls for different sessions.
+This v0.1 boundary protects SQLite's process-owned locks during database-header
+checks. Do not share Session handles between threads. Separate processes retain
+the documented writer-lease and SQLite contention behavior.
+
 Success requires transaction commit and separate read-back. A commit attempt or unconfirmed rollback/read-back leaves an unknown outcome and faults the handle. Preserve your original input and expected reference, close, inspect only that session, and explicitly recover. Missing, unsafe, corrupt or incomplete state never becomes successful emptiness. See the [operator runbook](docs/runbooks/result-capture.md) and [living contract](specs/orion-results-core-spec.md).
 
 The demonstrated environment is CPython 3.11.9, Linux x86_64 under WSL2, local ext4, SQLite 3.45.1. Native bare-metal Linux, other Python/SQLite combinations, network filesystems, Windows/macOS, hardware power loss, JavaScript and native agent integrations remain unverified or outside v0.1. The pure-Python wheel tag does not establish those platforms.
 
-Package uninstall preserves selected data. No garbage collector, deletion API, migration or automatic resend exists. Backup/read-back and rollback instructions are in the runbook. Tests use synthetic data; no private operating configuration or helper history is included. Build/test tools are development-only and hash locked. Proposed CI is local draft configuration, with no hosted repository or remote run yet.
+Package uninstall preserves selected data. No garbage collector, deletion API, migration or automatic resend exists. Backup/read-back and rollback instructions are in the runbook. Tests use synthetic data; no private operating configuration or helper history is included. Build/test tools are development-only and hash locked. CI verifies an installed wheel; the release receipt binds the selected artifacts and platform evidence.

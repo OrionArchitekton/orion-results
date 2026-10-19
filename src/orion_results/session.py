@@ -14,12 +14,14 @@ class Session:
         self._faulted = False
 
     @classmethod
+    @_storage.operation("not_stored")
     def create(cls, root, *, limits=Limits()):
         if type(limits) is not Limits:
             raise ResultError("invalid_input", "not_stored")
         return cls(_storage.Store(root, limits=limits, create=True))
 
     @classmethod
+    @_storage.operation("not_stored")
     def open(cls, root, session_id):
         return cls(_storage.Store(root, session_id))
 
@@ -39,6 +41,7 @@ class Session:
         if self._faulted:
             raise ResultError("commit_unknown", "commit_unknown", session_id=self.session_id)
 
+    @_storage.operation("not_stored")
     def capture(self, key, text):
         self._check()
         key_raw, payload = utf8(key), utf8(text)
@@ -48,6 +51,8 @@ class Session:
             raise ResultError("limit_exceeded", "not_stored", session_id=self.session_id)
         ref = Reference.from_text(self.session_id, text)
         db = self._store.db
+        if db.in_transaction:
+            raise ResultError("storage_busy", "not_stored", session_id=self.session_id, reference=ref)
         commit_attempted = False
         try:
             self._store.guard()
@@ -81,26 +86,36 @@ class Session:
                 verify.close()
             self._faulted = False
             return CaptureReceipt(ref, ref.utf8_bytes, ref.sha256, duplicate)
-        except (ResultError, OSError, sqlite3.DatabaseError) as error:
+        except BaseException as error:
             unknown = commit_attempted
             try:
                 if db.in_transaction:
                     db.execute("ROLLBACK")
-            except (OSError, sqlite3.DatabaseError):
+            except BaseException as rollback_error:
                 unknown = True
+                self._faulted = True
+                if not isinstance(rollback_error, (ResultError, OSError, sqlite3.DatabaseError)):
+                    raise
             if unknown:
                 self._faulted = True
+            # Cancellation keeps its native semantics after cleanup. A caller
+            # still has no receipt, and an uncertain handle remains faulted.
+            if not isinstance(error, (ResultError, OSError, sqlite3.DatabaseError)):
+                raise
+            if unknown:
                 raise ResultError("commit_unknown", "commit_unknown", session_id=self.session_id, reference=ref) from None
             mapped = _storage.map_error(error, outcome="not_stored", sid=self.session_id)
             if isinstance(error, sqlite3.DatabaseError):
                 mapped = ResultError("write_failed", "not_stored", session_id=self.session_id, reference=ref)
             raise mapped from None
 
+    @_storage.operation()
     def close(self):
         if not self._closed:
             self._store.close()
             self._closed = True
 
+    @_storage.operation()
     def snapshot(self, *, budget_bytes=32_000, include_content=False):
         from ._snapshot import render
         self._check()
@@ -117,6 +132,7 @@ class Session:
         self.close()
 
 
+@_storage.operation()
 def read(root, reference):
     try:
         selected = Reference.parse(reference)
@@ -126,6 +142,7 @@ def read(root, reference):
                           reference=error.reference) from None
 
 
+@_storage.operation()
 def inspect_session(root, session_id):
     try:
         store = _storage.Store(root, session_id, shared=True)
