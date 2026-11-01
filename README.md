@@ -1,5 +1,7 @@
 # orion-results
 
+Part of [Cosmocrat OS](https://www.cosmocrat.ai/tools#orion-results). Preview.
+
 orion-results 0.1.0 release candidate. MIT licensed.
 
 Capture complete text in an explicitly selected private local session, pass a byte-bounded snapshot, and recover the exact text by reference. There are no pip runtime dependencies, services or automatic harness hooks.
